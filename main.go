@@ -17,102 +17,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Category represents a category in the cashier system
-// type Category struct {
-// 	ID          int    `json:"id"`
-// 	Name        string `json:"name"`
-// 	Description string `json:"description"`
-// }
-
-// // In-memory storage (sementara, nanti ganti database)
-// var category = []Category{
-// 	{ID: 1, Name: "Electron", Description: "Electron products (Smartphone, Laptop, etc)"},
-// 	{ID: 2, Name: "Health", Description: "Health products (Vitamins, Medicine, etc)"},
-// 	{ID: 3, Name: "Hobbie", Description: "Hobbie products (Toys, Games, etc)"},
-// }
-
-// func getCategoryByID(w http.ResponseWriter, r *http.Request) {
-// 	// Parse ID dari URL path
-// 	// URL: /api/category/123 -> ID = 123
-// 	idStr := strings.TrimPrefix(r.URL.Path, "/api/category/")
-// 	id, err := strconv.Atoi(idStr)
-// 	if err != nil {
-// 		http.Error(w, "Invalid Category ID", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Cari category dengan ID tersebut
-// 	for _, p := range category {
-// 		if p.ID == id {
-// 			w.Header().Set("Content-Type", "application/json")
-// 			json.NewEncoder(w).Encode(p)
-// 			return
-// 		}
-// 	}
-
-// 	// Kalau tidak found
-// 	http.Error(w, "Category not found", http.StatusNotFound)
-// }
-
-// // PUT localhost:8080/api/category/{id}
-// func updateCategory(w http.ResponseWriter, r *http.Request) {
-// 	idStr := strings.TrimPrefix(r.URL.Path, "/api/category/")
-// 	id, err := strconv.Atoi(idStr)
-// 	if err != nil {
-// 		http.Error(w, "Invalid Category ID", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	var updateData Category
-// 	err = json.NewDecoder(r.Body).Decode(&updateData)
-// 	if err != nil {
-// 		http.Error(w, "Invalid request", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	for i := range category {
-// 		if category[i].ID == id {
-// 			// Update field satu-satu, jangan ganti ID
-// 			category[i].Name = updateData.Name
-// 			category[i].Description = updateData.Description
-
-// 			w.Header().Set("Content-Type", "application/json")
-// 			json.NewEncoder(w).Encode(category[i])
-// 			return
-// 		}
-// 	}
-
-// 	http.Error(w, "Category not found", http.StatusNotFound)
-// }
-
-// func deleteCategory(w http.ResponseWriter, r *http.Request) {
-// 	// get id
-// 	idStr := strings.TrimPrefix(r.URL.Path, "/api/category/")
-
-// 	// ganti id int
-// 	id, err := strconv.Atoi(idStr)
-// 	if err != nil {
-// 		http.Error(w, "Invalid Category ID", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// loop category cari ID, dapet index yang mau dihapus
-// 	for i, p := range category {
-// 		if p.ID == id {
-// 			// bikin slice baru dengan data sebelum dan sesudah index
-// 			category = append(category[:i], category[i+1:]...)
-
-// 			w.Header().Set("Content-Type", "application/json")
-// 			json.NewEncoder(w).Encode(map[string]string{
-// 				"message": "success delete",
-// 			})
-// 			return
-// 		}
-// 	}
-
-// 	http.Error(w, "Category not found", http.StatusNotFound)
-// }
-
 // ubah Config
 type Config struct {
 	Port   string `mapstructure:"PORT"`
@@ -154,49 +58,30 @@ func main() {
 	http.HandleFunc("/api/produk", productHandler.HandleProducts)
 	http.HandleFunc("/api/produk/", productHandler.HandleProductByID)
 
-	// GET localhost:8080/api/category/{id}
-	// PUT localhost:8080/api/category/{id}
-	// DELETE localhost:8080/api/category/{id}
-	// http.HandleFunc("/api/category/", func(w http.ResponseWriter, r *http.Request) {
-	// 	switch r.Method {
-	// 	case "GET":
-	// 		getCategoryByID(w, r)
-	// 	case "PUT":
-	// 		updateCategory(w, r)
-	// 	case "DELETE":
-	// 		deleteCategory(w, r)
-	// 	default:
-	// 		// TAMBAHKAN INI
-	// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	// 	}
-	// })
+	// ✅ Setup category repository, service, dan handler
+	categoryRepo := repositories.NewCategoryRepository(db)
+	categoryService := services.NewCategoryService(categoryRepo)
+	categoryHandler := handlers.NewCategoryHandler(categoryService)
 
-	// // GET localhost:8080/api/category
-	// // POST localhost:8080/api/category
-	// http.HandleFunc("/api/category", func(w http.ResponseWriter, r *http.Request) {
-	// 	switch r.Method {
-	// 	case "GET":
-	// 		w.Header().Set("Content-Type", "application/json")
-	// 		json.NewEncoder(w).Encode(category)
-	// 	case "POST":
-	// 		var categoryNew Category
-	// 		err := json.NewDecoder(r.Body).Decode(&categoryNew)
-	// 		if err != nil {
-	// 			http.Error(w, "Invalid request", http.StatusBadRequest)
-	// 			return
-	// 		}
+	// ✅ Setup routes untuk category
+	http.HandleFunc("/api/categories", categoryHandler.HandleCategory)
+	http.HandleFunc("/api/categories/", categoryHandler.HandleCategoryByID)
 
-	// 		categoryNew.ID = len(category) + 1
-	// 		category = append(category, categoryNew)
+	// ✅ Setup transaction repository, service, dan handler
+	transactionRepo := repositories.NewTransactionRepository(db)
+	transactionService := services.NewTransactionService(transactionRepo)
+	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
-	// 		w.Header().Set("Content-Type", "application/json")
-	// 		w.WriteHeader(http.StatusCreated)
-	// 		json.NewEncoder(w).Encode(categoryNew)
-	// 	default:
-	// 		// TAMBAHKAN INI
-	// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	// 	}
-	// })
+	http.HandleFunc("/api/checkout", transactionHandler.HandleCheckout) // POST
+
+	// ✅ Setup report repository, service, dan handler
+	reportRepo := repositories.NewReportRepository(db)
+	reportService := services.NewReportService(reportRepo)
+	reportHandler := handlers.NewReportHandler(reportService)
+
+	// ✅ Setup routes untuk report
+	http.HandleFunc("/api/report/hari-ini", reportHandler.HandleDailySalesReport) // GET
+	http.HandleFunc("/api/report", reportHandler.HandleSalesReport)                // GET with query params
 
 	// localhost:8080/health
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -209,6 +94,26 @@ func main() {
 
 	addr := "0.0.0.0:" + config.Port
 	fmt.Println("Server running di", addr)
+	fmt.Println("\n📋 Available endpoints:")
+	fmt.Println("  Health:")
+	fmt.Println("    - GET  /health")
+	fmt.Println("\n  Products:")
+	fmt.Println("    - GET    /api/produk")
+	fmt.Println("    - POST   /api/produk")
+	fmt.Println("    - GET    /api/produk/{id}")
+	fmt.Println("    - PUT    /api/produk/{id}")
+	fmt.Println("    - DELETE /api/produk/{id}")
+	fmt.Println("\n  Categories:")
+	fmt.Println("    - GET    /api/categories")
+	fmt.Println("    - POST   /api/categories")
+	fmt.Println("    - GET    /api/categories/{id}")
+	fmt.Println("    - PUT    /api/categories/{id}")
+	fmt.Println("    - DELETE /api/categories/{id}")
+	fmt.Println("\n  Transaction:")
+	fmt.Println("    - POST   /api/checkout")
+	fmt.Println("\n  Reports:")
+	fmt.Println("    - GET    /api/report/hari-ini")
+	fmt.Println("    - GET    /api/report?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD")
 
 	err = http.ListenAndServe(addr, nil)
 	if err != nil {
